@@ -7,6 +7,10 @@ a {
   text-decoration: none;
 }
 
+a:hover {
+  text-decoration: underline;
+}
+
 @media screen and (min-width: 768px) {
   #words {
     width: 50vw;
