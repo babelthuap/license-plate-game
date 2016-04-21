@@ -15,14 +15,14 @@ $(document).ready(function() {
 
 
   function findWords() {
-    var letters = $('#letters').val().toLowerCase();
+    var letters = $('#letters').val();
 
     if (letters.length < 2) {
       return $('#words').empty();
     }
 
     var rawRe = '.*' + letters.split('').join('.*') + '.*';
-    var re = new RegExp(rawRe);
+    var re = new RegExp(rawRe, 'i');
 
     var words = wordList.filter(function(word) {
       return re.test(word);

@@ -8,8 +8,6 @@ let arr = words.split('\n');
 
 arr = arr.filter(word => {
   return word.length >= 3 && !(/[^A-z]/.test(word));
-}).map(word => {
-  return word.toLowerCase();
 });
 
 let set = new Set(arr);
