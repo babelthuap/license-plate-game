@@ -28,10 +28,21 @@ $(document).ready(function() {
       return re.test(word);
     });
 
+    var $links;
     if (words.length === 0) {
-      words = ['no matches found!'];
+      $links = ['no matches found!'];
+    } else {
+      $links = words.map(function(word) {
+        var $link = $('<a>')
+          .text(word)
+          .attr('target', '_blank')
+          .attr('href', 'https://en.wiktionary.org/wiki/' + word);
+        return $('<span>')
+          .text(', ')
+          .prepend($link);
+      });
     }
 
-    $('#words').empty().text(words.join(', '))
+    $('#words').empty().append($links)
   }
 });
