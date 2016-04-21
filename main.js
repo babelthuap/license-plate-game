@@ -36,7 +36,7 @@ $(document).ready(function() {
         var $link = $('<a>')
           .text(word)
           .attr('target', '_blank')
-          .attr('href', 'https://en.wiktionary.org/wiki/' + word);
+          .attr('href', '//en.wiktionary.org/wiki/' + word);
         return $('<span>')
           .text(', ')
           .prepend($link);
