@@ -21,7 +21,9 @@ $(document).ready(function() {
       return $('#words').empty();
     }
 
-    var groups = letters.split(/(".*?)"/).filter(c => c);
+    var groups = letters.split(/(".*?)"/).filter(function(c) {
+      return c;
+    });
     var mapped = groups.map(function(group) {
       return (group[0] === '"') ? group.slice(1) : group.split('').join('.*')
     });
