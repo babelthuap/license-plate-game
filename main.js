@@ -21,7 +21,12 @@ $(document).ready(function() {
       return $('#words').empty();
     }
 
-    var rawRe = '.*' + letters.split('').join('.*') + '.*';
+    var groups = letters.split(/(".*?)"/).filter(c => c);
+    var mapped = groups.map(function(group) {
+      return (group[0] === '"') ? group.slice(1) : group.split('').join('.*')
+    });
+
+    var rawRe = '.*' + mapped.join('.*') + '.*';
     var re = new RegExp(rawRe, 'i');
 
     var words = wordList.filter(function(word) {
