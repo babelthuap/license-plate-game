@@ -1,18 +1,19 @@
-$(document).ready(function() {
+fetch('scrabbleWords.json')
+    .then(response => response.json())
+    .then(wordList => init(wordList));
+
+function init(wordList) {
   'use strict';
 
-
   $('#letters')
-  .on('keypress', function(e) {
-    if (e.charCode === 13) findWords();
-  })
-  .focus();
+      .on('keypress',
+          function(e) {
+            if (e.charCode === 13) findWords();
+          })
+      .focus();
 
 
-  $('#go')
-  .click(findWords)
-  .prop('disabled', false);
-
+  $('#go').click(findWords).prop('disabled', false);
 
   function findWords() {
     var letters = $('#letters').val();
@@ -41,15 +42,13 @@ $(document).ready(function() {
     } else {
       $links = words.map(function(word) {
         var $link = $('<a>')
-          .text(word)
-          .attr('target', '_blank')
-          .attr('href', '//en.wiktionary.org/wiki/' + word);
-        return $('<span>')
-          .text(', ')
-          .prepend($link);
+                        .text(word)
+                        .attr('target', '_blank')
+                        .attr('href', '//en.wiktionary.org/wiki/' + word);
+        return $('<span>').text(', ').prepend($link);
       });
     }
 
     $('#words').empty().append($links)
   }
-});
+}
