@@ -30,7 +30,8 @@ async function findWords(scrabbleWords) {
   if (!encodedMatches) {
     window.words.innerHTML = 'no matches found!';
   } else {
-    let matches = deltaDecode(encodedMatches).map(i => scrabbleWords[i]);
+    let matches = deltaDecode(decodeVarintArray(encodedMatches))
+                      .map(i => scrabbleWords[i]);
     if (key.length > 3) {
       const regex = new RegExp('.*' + key.split('').join('.*') + '.*');
       matches = matches.filter(word => regex.test(word));
@@ -61,13 +62,15 @@ async function initLicensePlateMap(scrabbleWords) {
     const licensePlateMap = buildMap(scrabbleWords);
     console.log('storing licensePlateMap...')
     const entries = Object.entries(licensePlateMap);
-    entries.forEach(entry => entry[1] = deltaEncode(entry[1]));
+    entries.forEach(
+        entry => entry[1] = encodeVarintArray(deltaEncode(entry[1])));
     await setMany(entries);
     set('licensePlateMapInitialized', true);
   }
 }
 
 function buildMap(scrabbleWords) {
+  console.log('building licensePlateMap...')
   const map = {};
   for (let i = 0; i < scrabbleWords.length; i++) {
     const word = scrabbleWords[i];
@@ -116,4 +119,34 @@ function deltaDecode(arr) {
     out[i] = out[i - 1] + arr[i];
   }
   return out;
+}
+
+const CONTIUE_BIT = 1 << 7;
+const BYTE_MAX = (1 << 7) - 1;
+
+function encodeVarintArray(intArray) {
+  const bytes = [];
+  for (let int of intArray) {
+    while (int > BYTE_MAX) {
+      bytes.push(int|CONTIUE_BIT);
+      int = int >> 7;
+    }
+    bytes.push(int);
+  }
+  return new Uint8Array(bytes);
+}
+
+function decodeVarintArray(varintArray) {
+  const intArray = [];
+  for (let i = 0, int = 0, byteOffset = 0; i < varintArray.length; i++) {
+    int = int | ((varintArray[i] & BYTE_MAX) << byteOffset);
+    if (varintArray[i] & CONTIUE_BIT) {
+      byteOffset += 7;
+    } else {
+      intArray.push(int);
+      int = 0;
+      byteOffset = 0;
+    }
+  }
+  return intArray;
 }
