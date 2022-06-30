@@ -1,54 +1,119 @@
-fetch('scrabbleWords.json')
-    .then(response => response.json())
-    .then(wordList => init(wordList));
+import {get, set, setMany} from './idb-keyval.js';
 
-function init(wordList) {
-  'use strict';
+init();
 
-  $('#letters')
-      .on('keypress',
-          function(e) {
-            if (e.charCode === 13) findWords();
-          })
-      .focus();
+async function init() {
+  const start = performance.now();
+  const scrabbleWords = await getScrabbleWords();
+  await initLicensePlateMap(scrabbleWords);
+  console.log('init:', (performance.now() - start).toFixed(1));
 
-
-  $('#go').click(findWords).prop('disabled', false);
-
-  function findWords() {
-    var letters = $('#letters').val();
-
-    if (letters.length < 2) {
-      return $('#words').empty();
+  window.letters.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      findWords(scrabbleWords);
     }
+  });
+  window.letters.focus();
 
-    var groups = letters.split(/(".*?)"/).filter(function(c) {
-      return c;
-    });
-    var mapped = groups.map(function(group) {
-      return (group[0] === '"') ? group.slice(1) : group.split('').join('.*')
-    });
+  window.go.addEventListener('click', () => findWords(scrabbleWords));
+  window.go.removeAttribute('disabled');
+}
 
-    var rawRe = '.*' + mapped.join('.*') + '.*';
-    var re = new RegExp(rawRe, 'i');
-
-    var words = wordList.filter(function(word) {
-      return re.test(word);
-    });
-
-    var $links;
-    if (words.length === 0) {
-      $links = ['no matches found!'];
-    } else {
-      $links = words.map(function(word) {
-        var $link = $('<a>')
-                        .text(word)
-                        .attr('target', '_blank')
-                        .attr('href', '//en.wiktionary.org/wiki/' + word);
-        return $('<span>').text(', ').prepend($link);
-      });
-    }
-
-    $('#words').empty().append($links)
+async function findWords(scrabbleWords) {
+  const start = performance.now();
+  const key = window.letters.value.toLowerCase().replace(/[^a-z]/g, '');
+  if (key.length < 3) {
+    window.words.innerHTML = '';
+    return;
   }
+  const encodedMatches = await get(key.slice(0, 3));
+  if (!encodedMatches) {
+    window.words.innerHTML = 'no matches found!';
+  } else {
+    let matches = deltaDecode(encodedMatches).map(i => scrabbleWords[i]);
+    if (key.length > 3) {
+      const regex = new RegExp('.*' + key.split('').join('.*') + '.*');
+      matches = matches.filter(word => regex.test(word));
+    }
+    window.words.innerHTML =
+        matches
+            .map(word => `<a target="_blank" href="https://en.wiktionary.org/wiki/${word}">${word}</a>`)
+            .join(', ');
+  }
+  console.log('findWords:', (performance.now() - start).toFixed(1));
+}
+
+async function getScrabbleWords() {
+  let scrabbleWords = await get('scrabbleWords');
+  if (!scrabbleWords) {
+    scrabbleWords =
+        await fetch(
+            'https://babelthuap.github.io/license-plate-game/scrabbleWords.json')
+            .then(response => response.json());
+    set('scrabbleWords', scrabbleWords);
+  }
+  return scrabbleWords;
+}
+
+async function initLicensePlateMap(scrabbleWords) {
+  let licensePlateMapInitialized = await get('licensePlateMapInitialized');
+  if (!licensePlateMapInitialized) {
+    const licensePlateMap = buildMap(scrabbleWords);
+    console.log('storing licensePlateMap...')
+    const entries = Object.entries(licensePlateMap);
+    entries.forEach(entry => entry[1] = deltaEncode(entry[1]));
+    await setMany(entries);
+    set('licensePlateMapInitialized', true);
+  }
+}
+
+function buildMap(scrabbleWords) {
+  const map = {};
+  for (let i = 0; i < scrabbleWords.length; i++) {
+    const word = scrabbleWords[i];
+    if (word.length < 3) {
+      continue;
+    }
+    const keys = new Set();
+    for (let i = 0; i < word.length - 2; i++) {
+      for (let j = i + 1; j < word.length - 1; j++) {
+        for (let k = j + 1; k < word.length; k++) {
+          keys.add(word[i] + word[j] + word[k]);
+        }
+      }
+    }
+    for (const key of keys) {
+      const arr = map[key];
+      if (arr) {
+        arr.push(i);
+      } else {
+        map[key] = [i];
+      }
+    }
+  }
+  return map;
+}
+
+function deltaEncode(arr) {
+  if (arr.length < 2) {
+    return arr;
+  }
+  const out = new Array(arr.length);
+  out[0] = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    out[i] = arr[i] - arr[i - 1];
+  }
+  return out;
+}
+
+function deltaDecode(arr) {
+  if (arr.length < 2) {
+    return arr;
+  }
+  const out = new Array(arr.length);
+  out[0] = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    out[i] = out[i - 1] + arr[i];
+  }
+  return out;
 }
